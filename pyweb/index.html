@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Server Management</title>
+  </head>
+  <body>
+    <h1>Server Management</h1>
+    <form action="" method="post">
+      <label for="command">Enter a command:</label>
+      <input type="text" id="command" name="command">
+      <input type="submit" value="Submit">
+    </form>
+    <pre id="output"></pre>
+    <script>
+      const form = document.querySelector("form");
+      const output = document.querySelector("#output");
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        const command = form.elements.command.value;
+        fetch("/run-command", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ command })
+        })
+        .then(response => response.text())
+        .then(text => {
+          output.textContent = text;
+        });
+      });
+    </script>
+  </body>
+</html>
