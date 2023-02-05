@@ -67,3 +67,26 @@ while True:
                 files[pos] = file_name
                 stdscr.addstr(11, 0, "File saved at: " + str(pos))
                 stdscr.refresh
+                stdscr.getch()
+                stdscr.addstr(11, 0, " "*len("File saved at: " + str(pos)))
+                stdscr.refresh()
+        else:
+            stdscr.addstr(11, 0, "You can't save a file here!")
+            stdscr.refresh()
+            stdscr.getch()
+            stdscr.addstr(11, 0, " "*len("You can't save a file here!"))
+            stdscr.refresh()
+    elif key == ord("q"):
+        break
+
+    # Clear the player position
+    matrix[player_pos[0], player_pos[1]] = "."
+
+    # Update the player position
+    matrix[player_pos[0], player_pos[1]] = "@"
+
+# Close the curses screen
+curses.nocbreak()
+stdscr.keypad(False)
+curses.echo()
+curses.endwin()
