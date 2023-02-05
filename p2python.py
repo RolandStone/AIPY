@@ -1,102 +1,69 @@
 import socket
+import os
 
-def start_server():
-    """Starts the server and listens for incoming client connections"""
-    host = ""
-    port = 12345
+def send_file(filename, conn):
+    if os.path.isfile(filename):
+        filesize = os.path.getsize(filename)
+        conn.send(f"EXISTS {filesize}".encode())
+        response = conn.recv(1024).decode()
+        if response[:2] == 'OK':
+            with open(filename, 'rb') as f:
+                bytes_to_send = f.read(1024)
+                conn.send(bytes_to_send)
+                while bytes_to_send != "":
+                    bytes_to_send = f.read(1024)
+                    conn.send(bytes_to_send)
+    else:
+        conn.send("ERR".encode())
 
-    # create a TCP/IP socket
-    s = socket.socket()
+def receive_file(filename, conn):
+    response = conn.recv(1024).decode()
+    if response[:6] == 'EXISTS':
+        filesize = int(response[6:])
+        conn.send("OK".encode())
+        with open(filename, 'wb') as f:
+            data = conn.recv(1024)
+            total_received = len(data)
+            f.write(data)
+            while total_received < filesize:
+                data = conn.recv(1024)
+                total_received += len(data)
+                f.write(data)
+            print("File received successfully")
+    else:
+        print("File does not exist")
 
-    # bind the socket to a specific address and port
-    s.bind((host, port))
-
-    # listen for incoming connections
-    s.listen()
-
-    print(f"[+] Server started at {host}:{port}")
-
-    # wait for a connection
-    conn, addr = s.accept()
-    print(f"[+] Client connected from {addr[0]}:{addr[1]}")
-
-    # send a welcome message to the client
-    conn.send("Welcome to the chatroom!".encode())
-
+def handle_client(conn, addr):
+    print(f"[+] New client connected from {addr[0]}:{addr[1]}")
     while True:
-        # receive data from the client
         data = conn.recv(1024).decode()
         if not data:
             break
-        print(f"Client: {data}")
-
-        # send data back to the client
-        message = input("You: ")
-        if message.startswith("SEND"):
-            filename = message.split()[1]
+        if data.startswith("SEND"):
+            filename = data.split()[1]
             send_file(filename, conn)
-        elif message.startswith("GET"):
-            filename = message.split()[1]
+        elif data.startswith("GET"):
+            filename = data.split()[1]
             receive_file(filename, conn)
         else:
+            print(f"Client({addr[0]}:{addr[1]}): {data}")
+            message = input("You: ")
             conn.send(message.encode())
-
-    # close the connection
+    print(f"[-] Client disconnected from {addr[0]}:{addr[1]}")
     conn.close()
 
-def start_client():
-    """Starts the client and connects to a server"""
-    host = input("Enter server address: ")
-    port = int(input("Enter port: "))
+def start_server():
+    host = '0.0.0.0'
+    port = 5000
 
-    # create a TCP/IP socket
     s = socket.socket()
-
-    # connect to the server
-    s.connect((host, port))
-    print("[+] Connected to server")
-
-    # receive the welcome message from the server
-    data = s.recv(1024).decode()
-    print(f"Server: {data}")
-
-    while True:
-        # receive data from the server
-        message = input("You: ")
-        if message.startswith("SEND"):
-            filename = message.split()[1]
-            send_file(filename, s)
-        elif message.startswith("GET"):
-            filename = message.split()[1]
-            receive_file(filename, s)
-        else:
-            s.send(message.encode())
-            data = s.recv(1024).decode()
-            if not data:
-                break
-            print(f"Server: {data}")
-
-    # close the connection
+    s.bind((host, port))
+    s.listen(1)
+    print("[+] Server started")
+    conn, addr = s.accept()
+    print(f"[+] Client connected from {addr[0]}:{addr[1]}")
+    handle_client(conn, addr)
     s.close()
 
-def send_file(filename, conn):
-    """Sends a file to the specified connection"""
-    with open(filename, "rb") as f:
-        data = f.read()
-        conn.send(data)
-
-def receive_file(filename, conn):
-    """Receives a file from the specified connection"""
-    with open(filename, "wb") as f:
-        data = conn.recv(1024)
-        f.write(data)
-
 if __name__ == '__main__':
-    # ask the user if they want to start as a server or client
-    mode = input("Would you like to start as a server or client? (Enter 'server' or 'client'): ")
-if mode.lower() == "server":
-	start_server()
-elif mode.lower() == "client":
-	start_client()
-else:
-	print("Invalid choice, try again.")
+    start_server()
