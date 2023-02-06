@@ -21,4 +21,4 @@ def start_client(server_host, server_port):
         print(response)
 
 if __name__ == '__main__':
-    start_client('127.0.0.1', 1337)
+    start_client('10.0.0.214', 1337)

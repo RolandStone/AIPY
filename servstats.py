@@ -1,21 +1,52 @@
 import psutil
-import time
+from terminaltables import AsciiTable
+from termcolor import colored
 
-def dashboard():
-    print("\033c")  # Clears the terminal
-    print("\033[1;35;40mServer Dashboard\033[0m\n")  # Changes text color to purple
-    print("\033[1;32;40mConnected peers: \033[0m", psutil.net_connections())  # Changes text color to green
-    print("\n\033[1;32;40mRunning commands: \033[0m\n")  # Changes text color to green
+def get_remote_connections():
+    remote_connections = []
+    for conn in psutil.net_connections(kind='inet'):
+        if conn.raddr:
+            remote_connections.append([conn.pid, conn.status, conn.laddr, conn.raddr])
+    return remote_connections
 
-    for process in psutil.process_iter():
-        print("\033[1;33;40m", process.name(), "\033[0m: \033[1;36;40m", process.cmdline(), "\033[0m")  # Changes text color to yellow
+def get_running_commands():
+    running_commands = []
+    for process in psutil.process_iter(['pid', 'name', 'cmdline']):
+        cmdline = process.info['cmdline']
+        if cmdline:
+            running_commands.append([process.info['pid'], process.info['name'], ' '.join(list(cmdline))])
+        else:
+            running_commands.append([process.info['pid'], process.info['name'], ''])
+    return running_commands
 
-    print("\n\033[1;32;40mCPU utilization: \033[0m \033[1;36;40m", psutil.cpu_percent(), "%\033[0m")  # Changes text color to green and blue
-    print("\033[1;32;40mMemory utilization: \033[0m \033[1;36;40m", psutil.virtual_memory().percent, "%\033[0m")  # Changes text color to green and blue
-    print("\033[1;32;40mDisk utilization: \033[0m \033[1;36;40m", psutil.disk_usage('/').percent, "%\033[0m")  # Changes text color to green and blue
 
-    print("\n\033[1;32;40mRefreshing in 5 seconds...\033[0m\n")  # Changes text color to green
-    time.sleep(5)
+def get_server_traffic():
+    sent = psutil.net_io_counters().bytes_sent
+    received = psutil.net_io_counters().bytes_recv
+    return sent, received
 
-while True:
-    dashboard()
+def main():
+    print(colored('\n[ Remote Connections ]\n', 'yellow'))
+    remote_connections = get_remote_connections()
+    table_data = [['PID', 'Status', 'Local Address', 'Remote Address']]
+    for conn in remote_connections:
+        table_data.append(conn)
+    table = AsciiTable(table_data)
+    print(table.table)
+
+    print(colored('\n[ Running Commands ]\n', 'yellow'))
+    running_commands = get_running_commands()
+    table_data = [['PID', 'Name', 'Command Line']]
+    for command in running_commands:
+        table_data.append(command)
+    table = AsciiTable(table_data)
+    print(table.table)
+
+    print(colored('\n[ Server Traffic ]\n', 'yellow'))
+    sent, received = get_server_traffic()
+    table_data = [['Bytes Sent', 'Bytes Received'], [sent, received]]
+    table = AsciiTable(table_data)
+    print(table.table)
+
+if __name__ == '__main__':
+    main()
